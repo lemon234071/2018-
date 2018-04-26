@@ -3,17 +3,23 @@ import pandas as pd
 import numpy as np
 from pandas import Series,DataFrame
 from sklearn.preprocessing import OneHotEncoder,LabelEncoder
+import datetime
 list = [98, 88, 0, 0, 86, 33,0,0,0,0]
 list1 = [ 1,2,0,0,5,6,7,8,9,0]
+list2 = [ 1,0,1,0,1,0,1,0,1,0]
 df = pd.DataFrame({'score':list,
-                   'aid':list1
+                   'aid':list1,
+                   'uid':list,
+                   'label':list2
 
 })
-
-count = temp.groupby([feat_1, feat_2]).apply(lambda x: x['label'][(x['day'] < day).values].count()).reset_index(
-    name=feat_1 + '_' + feat_2 + '_all')
-count1 = temp.groupby([feat_1, feat_2]).apply(lambda x: x['label'][(x['day'] < day).values].sum()).reset_index(
-    name=feat_1 + '_' + feat_2 + '_1')
+df = pd.read_csv('../data/origin/train1.csv')
+t_start = datetime.datetime.now()
+count_par = df.groupby(['uid']).apply(lambda x: x.loc[x['label']==1,'label'].count()).reset_index(name='uid' + '_par')#[(x['label'] == 1).values].count()).reset_index(name='uid' + '_par')
+count_all = df.groupby(['uid']).apply(lambda x: x['label'].count()).reset_index(name='uid' + '_all')
+t_end = datetime.datetime.now()
+print('training time: %s' % ((t_end - t_start).seconds))
+print('test')
 # df_ctr = pd.DataFrame(list, columns=['S'])
 #
 # ctr_labelok = df.loc[df['score'] == 0, ['score', 'aid']]
