@@ -162,6 +162,17 @@ def bs_smooth(X_loc_train, X_loc_test):
     X_loc_test.to_csv(temppath+'statistic2_smooth2_test_smooth.csv',index=False)
 
 
+def base_word2vec(x, model, size):
+    vec = np.zeros(size)
+    x = [item for item in x if model.wv.__contains__(item)]
+
+    for item in x:
+        vec += model.wv[item]
+    if len(x) == 0:
+        return vec
+    else:
+        return vec / len(x)
+
 import collections
 def select_topk(data):
     """

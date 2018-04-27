@@ -13,13 +13,33 @@ df = pd.DataFrame({'score':list,
                    'label':list2
 
 })
-df = pd.read_csv('../data/origin/train1.csv')
-t_start = datetime.datetime.now()
-count_par = df.groupby(['uid']).apply(lambda x: x.loc[x['label']==1,'label'].count()).reset_index(name='uid' + '_par')#[(x['label'] == 1).values].count()).reset_index(name='uid' + '_par')
-count_all = df.groupby(['uid']).apply(lambda x: x['label'].count()).reset_index(name='uid' + '_all')
-t_end = datetime.datetime.now()
-print('training time: %s' % ((t_end - t_start).seconds))
-print('test')
+
+
+from gensim.models import word2vec
+
+# 引入日志配置
+import logging
+
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+
+# 引入数据集
+raw_sentences = ["the quick brown fox jumps over the lazy dogs","yoyoyo you go home now to sleep"]
+
+# 切分词汇
+sentences= [s.encode('utf-8').split() for s in raw_sentences]
+
+# 构建模型
+model = word2vec.Word2Vec(sentences, min_count=1)
+
+# 进行相关性比较
+model.similarity('dogs','you')
+# df = pd.read_csv('../data/origin/train1.csv')
+# t_start = datetime.datetime.now()
+# count_par = df.groupby(['uid']).apply(lambda x: x.loc[x['label']==1,'label'].count()).reset_index(name='uid' + '_par')#[(x['label'] == 1).values].count()).reset_index(name='uid' + '_par')
+# count_all = df.groupby(['uid']).apply(lambda x: x['label'].count()).reset_index(name='uid' + '_all')
+# t_end = datetime.datetime.now()
+# print('training time: %s' % ((t_end - t_start).seconds))
+# print('test')
 # df_ctr = pd.DataFrame(list, columns=['S'])
 #
 # ctr_labelok = df.loc[df['score'] == 0, ['score', 'aid']]
