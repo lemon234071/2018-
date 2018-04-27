@@ -51,6 +51,8 @@ def LGB_test(train_x,train_y,test_x,test_y):
     )
     clf.fit(train_x, train_y,eval_set=[(train_x, train_y),(test_x,test_y)],eval_metric='auc',early_stopping_rounds=100)
     print(clf.feature_importances_)
+    df_feat_impor = pd.DataFrame(clf.feature_importances_)
+    df_feat_impor.to_csv(temppath + 'feat_impor.csv')
     return clf,clf.best_score_[ 'valid_1']['auc']
 
 def LGB_predict(train_x,train_y,test_x,res):
