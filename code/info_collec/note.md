@@ -15,12 +15,15 @@ warning here cross validate!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!(and know some pickle
 http://www.dataguru.cn/article-12877-1.html  
 http://www.docin.com/p-1144110216.html  
 https://blog.csdn.net/shichaog/article/details/72848502  
-https://www.jianshu.com/p/b26a5ba91940  
+https://www.jianshu.com/p/b26a5ba91940
+https://www.zhihu.com/question/19971859
+
 4,corr()  
 5,wash data  
 6,trick feature  
 
 then pass the code then filter
+
 
 
 
@@ -72,7 +75,57 @@ nn model:
     用NN加流式读取做的,因为NN的batch 训练的啊，如果batch_size是64，那每次读64行就行了,加个max_feature＝200，就快很多了,不是lgb，是countvector,  
     不过FTRL可提升的空间不大,我的网络用的是NLP的embedding加一些pooling，最后MLP    
     /笑哭 nn输出＋fm+lr+stacking + belding + stacking + blediing  
-    http://url.cn/5ITzZib  
+    http://url.cn/5ITzZib
+
+
+    https://zhuanlan.zhihu.com/p/32885978?utm_medium=social&utm_member=MTQyNzc1ZGNiYmVjMDVkZGM2MTgwZmUwOTljOWNhNmY%3D&utm_source=qq
+
+    nzc.(120446477) 15:06:42
+    比如w2v这种
+    Hermite(910988450) 15:06:45
+    先选部分数据跑
+    Hermite(910988450) 15:06:58
+    然后再跑整个数据 就会快了
+    nzc.(120446477) 15:07:07
+    基于dnn得到的有监督的embeddibg
+    nzc.(120446477) 15:07:27
+    比w2v这种无监督得到的好多了
+    nzc.(120446477) 15:07:45
+    所以这种特征如果是dnn的话，根本不用做
+    @李乐乐乐乐啊🤵🏻(1137440039) 15:08:27
+    嗯，embeding效果也不错
+    Trust the Process-中山大学(314123799) 15:08:32
+    @nzc. 你embedding做了几维啊
+    nzc.(120446477) 15:09:14
+    4-10就够了啊
+    nzc.(120446477) 15:09:24
+    不用太大的吧
+
+    Trust the Process-中山大学(314123799) 15:10:27
+    之前有人跟我说取log2差不多
+    Hermite(910988450) 15:10:52
+    log2是怎么来的
+    nzc.(120446477) 15:11:05
+    看结构的吧
+    nzc.(120446477) 15:11:20
+    有些网络结构要求等长
+    Trust the Process-中山大学(314123799) 15:11:33
+    做内积就要等长咯
+    nzc.(120446477) 15:11:38
+    dcn这种好像是根号2
+
+
+
+
+    Trust the Process-中山大学(314123799) 15:12:18
+    试了deepfm，效果不咋地
+
+    bupt-划水(946533269) 15:41:48
+    多值离散特征你在deepfm怎么处理的@Trust the Process-中山大学
+    15:42:20
+    旗开得胜siiussilen撤回了一条消息
+    Trust the Process-中山大学(314123799) 15:42:34
+    embedding取均值
 others:  
 
   自己做的那叫验证集。而且也是看验证集的AUC来调模型，  

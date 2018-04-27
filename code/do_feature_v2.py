@@ -81,8 +81,8 @@ def get_data():
     tf_train = pd.read_csv(rawpath + 'LE_all.csv')
     return tf_train, tf_test
 
-def run():
-    X_loc_train,X_loc_test= get_data()
+def bs_smooth(X_loc_train, X_loc_test):
+
     for feat_1 in ['creativeId','uid','LBS','advertiserId']:
         temp = pd.read_csv(temppath+'%s.csv' %feat_1)
         bs = BayesianSmoothing(1, 1)
@@ -158,5 +158,64 @@ def run():
     print('over')
     print(X_loc_train.shape)
     print(X_loc_train.columns)
-    X_loc_train.to_csv(temppath+'2_smooth.csv',index=False)
-    X_loc_test.to_csv(temppath+'2_test_smooth.csv',index=False)
+    X_loc_train.to_csv(temppath+'statistic2_smooth.csv',index=False)
+    X_loc_test.to_csv(temppath+'statistic2_smooth2_test_smooth.csv',index=False)
+
+
+import collections
+def select_topk(data):
+    """
+    选择频率最高的 k 个word 此处为前20%
+    :param data:
+    :return:
+    """
+    word_list = []
+    for words in data:
+        word_list += words
+    result = collections.Counter(word_list)
+    size = len(result)
+    result = result.most_common(int(size * 0.2))
+
+    word_dict = {}
+    for re in result:
+        word_dict[re[0]] = 1
+    print('word_vec: ', size, len(result))
+    return word_dict
+
+from gensim.models.word2vec import Word2Vec
+def do_feat_W2V(data):
+    df_W2V = data[['aid','uid','label']]
+    for feature in vector_feature:
+        print("this is feature:", feature)
+
+        data[feature] = data[feature].apply(lambda x: str(x).split(' '))
+        word_dict = select_topk(data[feature])#need to make sure!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!here is right
+        data[feature] = data[feature].apply(lambda x: ' '.join(
+            [word for word in x if word_dict.__contains__(word)]))
+
+        model = Word2Vec(data[feature], size=10, min_count=1, iter=5, window=2)
+        data_vec = []
+        for row in data[feature]:
+            data_vec.append(base_word2vec(row, model, size=10))
+        column_names = []
+        for i in range(10):
+            column_names.append(feature + str(i))
+        data_vec = pd.DataFrame(data_vec, columns=column_names)
+        df_W2V = pd.concat([df_W2V, data_vec], axis=1)#need to make sure!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!here is right
+        del data[feature]
+    return df_W2V
+
+def do_feat2( ):
+    tf_test = pd.read_csv(temppath+'statistic2_smooth2_test_smooth.csv')
+    tf_train = pd.read_csv(temppath + 'statistic2_smooth2_smooth.csv')
+    tf_test['label'] = None#need to make sure!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!here is right
+    data = pd.concat([tf_train, tf_test])
+    data = do_feat_W2V(data)
+    train = data[data.label.notnull()]
+    test = data[data.label.isnull()]
+    train.to_csv(temppath+'2_smooth.csv',index=False)
+    test.to_csv(temppath+'2_smooth2_test_smooth.csv',index=False)
+
+#X_loc_train,X_loc_test= get_data()
+#bs_smooth(X_loc_train,X_loc_test)
+do_feat2()

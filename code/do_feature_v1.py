@@ -2,7 +2,7 @@ import pandas as pd
 from sklearn.preprocessing import OneHotEncoder,LabelEncoder
 import os
 import gc
-from do_feature_v2 import run
+
 
 rawpath='../data/origin/'
 temppath='../data/temp/'
@@ -39,7 +39,7 @@ def get_data():
     tf_train.to_csv(temppath + 'LE_all.csv')
     return tf_train
 
-def do_feat1(tf_train):
+def do_feat_statisc(tf_train):
 
     for feat_1 in ['uid','LBS','advertiserId']:#'creativeId',
         gc.collect()
@@ -88,5 +88,6 @@ def do_feat1(tf_train):
 
 #tf_train = get_data()
 tf_train = pd.read_csv(temppath + 'LE_all.csv')
-do_feat1(tf_train)
-run()
+#do_feat_statisc(tf_train)
+
+

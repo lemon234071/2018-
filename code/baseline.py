@@ -85,7 +85,7 @@ def LGB_test(train_x,train_y,test_x,test_y):
         learning_rate=0.05, min_child_weight=50,random_state=2018,n_jobs=cpu_count()-1
     )
     clf.fit(train_x, train_y,eval_set=[(train_x, train_y),(test_x,test_y)],eval_metric='auc',early_stopping_rounds=100)
-    # print(clf.feature_importances_)
+    print(clf.feature_importances_)
     return clf,clf.best_score_[ 'valid_1']['auc']
 
 def LGB_predict(train_x,train_y,test_x,res):
@@ -105,4 +105,5 @@ def LGB_predict(train_x,train_y,test_x,res):
     os.system('zip baseline.zip ../data/submission.csv')
     return clf
 #线下测试
-model=LGB_predict(train_x,train_y,test_x,res)
+df_offline = LGB_test(train_x,train_y,test_x,test1_y)
+#model=LGB_predict(train_x,train_y,test_x,res)
