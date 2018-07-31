@@ -5,7 +5,7 @@
 	./picture/top1.png
 第三名为清华大学茶园和贵系大佬自创的DEEP INTEREST FFM，PPT海报位于：  
 
-	./picture/top3.png
+	./picture/top3.pdf
 其余大佬模型多基于郭大和渣大分享的NFFM模型稍作改动，此模型为2017年第一届比赛南大熊猫冠军模型，github地址：  
 
 	郭大https://github.com/guoday/Tencent2018_Lookalike_Rank7th（郭大的Xdeepfm听说有效果，还未来得及研究）
