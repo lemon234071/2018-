@@ -12,8 +12,12 @@
 	渣大https://github.com/nzc/tencent-contest
 top20经验贴传送门：  
 	
-	Tensorflow:第二届腾讯广告算法大赛总结（Rank 9）
-	Pytourch:2018腾讯广告算法大赛总结/0.772229/Rank11
+	官方baseline:
+	https://github.com/YouChouNoBB/2018-tencent-ad-competition-baseline
+
+	Tensorflow:[2018腾讯广告算法大赛总结（Rank6）-模型篇](https://zhuanlan.zhihu.com/p/38443751)
+	Pytourch:[第二届腾讯广告算法大赛总结（Rank 9）](https://zhuanlan.zhihu.com/p/38499275?utm_source=com.tencent.tim&utm_medium=social&utm_oi=571282483765710848)
+	[2018腾讯广告算法大赛总结/0.772229/Rank11](https://zhuanlan.zhihu.com/p/38034501)
 以上模型皆属于neutral network模型，因当数据量很大，机器限制又很高的时候，NN模型很适应场景，ctr nn模型扫盲贴在后面，此次数据量过大，复赛对GPU和内存要求很高，大概400G内存，我将在下面的目录下放一个我赛后学习测试用的数据集，16G笔记本可跑：  
 	
 	./datas/
@@ -66,3 +70,4 @@ PS:具体情况具体分析，有时候选特征可以看LGB提供的API看重�
 
 	# 特征清洗很重要，不然要重做特征很多次，做大量特征前要小批量验证代码正确，不然有BUG就很浪费时间
 	#内存不够的时候read_csv数据类型别用默认的64位
+	#del 后的内存要和谐的collect()一下
