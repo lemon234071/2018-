@@ -7,11 +7,13 @@ import gc
 import random
 import numpy as np
 import scipy.special as special
+from tqdm import tqdm
+from collections import *
 
 cross_feat = ['LBS_marriageStatus','adCategoryId_LBS','adCategoryId_age','adCategoryId_ct','adCategoryId_productId','advertiserId_LBS','campaignId_productId','campaignId_adCategoryId','campaignId_age','campaignId_ct','campaignId_marriageStatus','consumptionAbility_ct','education_ct','gender_os','productId_LBS','productType_marriageStatus','productType_ct']
 
 stas_feat = ['adCategoryId_age','adCategoryId_marriageStatus','age_carrier','age_consumptionAbility','age_gender','age_house','age_os','campaignId_LBS','campaignId_marriageStatus','consumptionAbility_gender','creativeSize_age','creativeSize_marriageStatus','education_gender','productId_marriageStatus','productType_age','productType_consumptionAbility']
-
+#多值特征
 def feat_mulval(data):
     for i in data.columns:
         i_types = data[i].dtypes
@@ -30,12 +32,12 @@ def feat_mulval(data):
                         lambda x: len(list(set(str(x).split(' '))))
                     )
     return data
-
+#过滤低值
 def remove_lowcase(se,times):
     count = dict(se.value_counts())
     se = se.map(lambda x : -1 if count[x]<times else x)
     return se
-
+#交叉组合特征
 def feat_cross(data):
     for feat in cross_feat+stas_feat:
         afeat,ufeat = feat.split('_')
@@ -52,7 +54,7 @@ def feat_cross(data):
         print(concat_feat + ' ok')
     return data
 
-
+#转化率特征
 def feat_sta(data):
     df_tr = data[['uid', 'aid', 'label']]
     for feat in stas_feat:
@@ -80,7 +82,29 @@ def feat_sta(data):
         data= pd.merge(data,df_stas_feat,on=['aid','uid'],how='left')
         print(concat_feat+'ok')
     return data
+def static_feat(df,df_val, feature):
 
+    df['label'] = df['label'].replace(-1,0)
+    df = df.groupby(feature)['label'].agg(['sum','count']).reset_index()
+
+    new_feat_name = feature + '_stas'
+    ###########################
+    bs = BayesianSmoothing(1, 1)
+    bs.update(df['count'].values, df['sum'].values, 1000, 0.001)
+    df.loc[:, new_feat_name] = (df['sum'] + bs.alpha) / (df['count'] + bs.alpha + bs.beta)
+    ###############################
+    #df.loc[:,new_feat_name] = 100 * (df['sum'] + 1) / (df['count'] + np.sum(df['sum']))
+
+    # print(df.head())
+    df_stas = df[[feature,new_feat_name]]
+
+    df_val = pd.merge(df_val, df_stas, how='left', on=feature)
+    ####
+    df_val.fillna(value=bs.alpha / (bs.alpha + bs.beta), inplace=True)
+    df_val[new_feat_name]=round(100*df_val[new_feat_name],8)
+    del df_val[feature]
+    return df_val
+#贝叶斯平滑
 class BayesianSmoothing(object):
     def __init__(self, alpha, beta):
         self.alpha = alpha
@@ -118,28 +142,9 @@ class BayesianSmoothing(object):
 
         return alpha * (numerator_alpha / denominator), beta * (numerator_beta / denominator)
 
-def static_feat(df,df_val, feature):
 
-    df['label'] = df['label'].replace(-1,0)
-    df = df.groupby(feature)['label'].agg(['sum','count']).reset_index()
 
-    new_feat_name = feature + '_stas'
-    ###########################
-    bs = BayesianSmoothing(1, 1)
-    bs.update(df['count'].values, df['sum'].values, 1000, 0.001)
-    df.loc[:, new_feat_name] = (df['sum'] + bs.alpha) / (df['count'] + bs.alpha + bs.beta)
-    ###############################
-    #df.loc[:,new_feat_name] = 100 * (df['sum'] + 1) / (df['count'] + np.sum(df['sum']))
-
-    # print(df.head())
-    df_stas = df[[feature,new_feat_name]]
-
-    df_val = pd.merge(df_val, df_stas, how='left', on=feature)
-    ####
-    df_val.fillna(value=bs.alpha / (bs.alpha + bs.beta), inplace=True)
-    df_val[new_feat_name]=round(100*df_val[new_feat_name],8)
-    del df_val[feature]
-    return df_val
+#多值转化率特征
 def nlp_feature_score(feature,data):
     predict = data[data['label'] == 0 ]
     train = data[data['label'] != 0 ]
@@ -233,13 +238,15 @@ class HyperParam(object):
         sumfenmu = (special.digamma(tries + alpha + beta) - special.digamma(alpha + beta)).sum()
 
         return alpha * (sumfenzialpha / sumfenmu), beta * (sumfenzibeta / sumfenmu)
-
+#计数特征
 def feat_size(data):
     aid_age_count = data.groupby(['aid', 'age']).size().reset_index().rename(columns={0: 'aid_age_count'})
     data = pd.merge(data, aid_age_count, 'left', on=['aid', 'age'])
     aid_gender_count = data.groupby(['aid', 'gender']).size().reset_index().rename(columns={0: 'aid_gender_count'})
     data = pd.merge(data, aid_gender_count, 'left', on=['aid', 'gender'])
     return data
+
+#nunique特征
 def feat_active(data):
     add = pd.DataFrame(data.groupby(["campaignId"]).aid.nunique()).reset_index()
     add.columns = ["campaignId", "campaignId_active_aid"]
@@ -274,111 +281,115 @@ def pro(data):
     data = get_nunique(data,'productId','aid','productId_to_aid')
     return data
 
-def feat_mulval(data):
+#计数特征
+def feat_count():
+    for feat in config.vector:
+    df_LE[feat+'_count_byuid'] = df_LE.groupby('uid')[feat].apply(lambda x: str(x).split(' ').count())
+#####################################################
+#重复值特征
+def feat_duplicate():
+    subset = []
+    data['maybe'] = 0
+    pos = data.duplicated(subset=subset, keep=False)
+    data.loc[pos, 'maybe'] = 1
+    pos = (~data.duplicated(subset=subset, keep='first')) & data.duplicated(subset=subset, keep=False)
+    data.loc[pos, 'maybe'] = 2
+    pos = (~data.duplicated(subset=subset, keep='last')) & data.duplicated(subset=subset, keep=False)
+    data.loc[pos, 'maybe'] = 3
 
-    for i in data.columns:
-        i_types = data[i].dtypes
-        if i_types != 'object':
-            print('single', i)
-            # train_and_test_and_adFeature[i] = train_and_test_and_adFeature[i].astype('category', copy=False)
-        else:
-            if str(i).startswith('marriageStatus'):
-                tmp = data[i].apply(lambda x: len(str(x).split(' ')))
-                i_length = min(5, tmp.max())
-                for sub_i in range(i_length):
-                    data[i + '_%d' % (sub_i)] = data[i].apply(
-                        lambda x: str(x).split(' ')[sub_i] if sub_i < len(str(x).split(' ')) else -1
-                    )
-                    data[i + '_length'] = data[i].apply(
-                    lambda x: len(list(set(str(x).split(' '))))
-                )
-
+    features_trans = ['maybe']
+    data = pd.get_dummies(data, columns=features_trans)
+    data['maybe_0'] = data['maybe_0'].astype(np.int8)
+    data['maybe_1'] = data['maybe_1'].astype(np.int8)
+    data['maybe_2'] = data['maybe_2'].astype(np.int8)
+    data['maybe_3'] = data['maybe_3'].astype(np.int8)
+    # 重复次数是否大于2
+    temp = data.groupby(subset)['label'].count().reset_index()
+    temp.columns = ['creativeID', 'positionID', 'adID', 'appID', 'userID', 'large2']
+    temp['large2'] = 1 * (temp['large2'] > 2)
+    data = pd.merge(data, temp, how='left', on=subset)
+    del temp
+    gc.collect()
     return data
 
-######################################################
-# def feat_count():
-#     for feat in config.vector:
-#     df_LE[feat+'_count_byuid'] = df_LE.groupby('uid')[feat].apply(lambda x: str(x).split(' ').count())
-# #####################################################
-#
-# def feat_duplicate():
-#     subset = []
-#     data['maybe'] = 0
-#     pos = data.duplicated(subset=subset, keep=False)
-#     data.loc[pos, 'maybe'] = 1
-#     pos = (~data.duplicated(subset=subset, keep='first')) & data.duplicated(subset=subset, keep=False)
-#     data.loc[pos, 'maybe'] = 2
-#     pos = (~data.duplicated(subset=subset, keep='last')) & data.duplicated(subset=subset, keep=False)
-#     data.loc[pos, 'maybe'] = 3
-#
-#     features_trans = ['maybe']
-#     data = pd.get_dummies(data, columns=features_trans)
-#     data['maybe_0'] = data['maybe_0'].astype(np.int8)
-#     data['maybe_1'] = data['maybe_1'].astype(np.int8)
-#     data['maybe_2'] = data['maybe_2'].astype(np.int8)
-#     data['maybe_3'] = data['maybe_3'].astype(np.int8)
-#     # 重复次数是否大于2
-#     temp = data.groupby(subset)['label'].count().reset_index()
-#     temp.columns = ['creativeID', 'positionID', 'adID', 'appID', 'userID', 'large2']
-#     temp['large2'] = 1 * (temp['large2'] > 2)
-#     data = pd.merge(data, temp, how='left', on=subset)
-#     del temp
-#     gc.collect()
-#     return data
-#
-# ###############################################
-#
-#
-# def feat_mean():
-#     res = data[['index']]
-#
-#     grouped = data.groupby('appID')['age'].mean().reset_index()
-#     grouped.columns = ['appID', 'app_mean_age']
-#     data = data.merge(grouped, how='left', on='appID')
-#     grouped = data.groupby('positionID')['age'].mean().reset_index()
-#     grouped.columns = ['positionID', 'position_mean_age']
-#     data = data.merge(grouped, how='left', on='positionID')
-#     grouped = data.groupby('appCategory')['age'].mean().reset_index()
-#     grouped.columns = ['appCategory', 'appCategory_mean_age']
-#     data = data.merge(grouped, how='left', on='appCategory')
-#
-#     X_train = data.loc[data['label'] != -1, :]
-#     X_test = data.loc[data['label'] == -1, :]
-#     X_test.loc[:, 'instanceID'] = res.values
-#     del data, grouped
-#     gc.collect()
-#     return X_train, X_test
-########################################################################
-# def get_rank_feat(data, col, name):
-#     data[name] = data.groupby(col).cumcount() + 1
-#     return data
 
+#均值特征
+def feat_mean():
+    res = data[['index']]
 
-#########################
-# train =  pd.read_csv('./datas/trainMerged.csv')
-# test1 = pd.read_csv('./datas/test1Merged.csv')
-# test2 = pd.read_csv('./datas/test2Merged.csv')
-# data = pd.concat([train,test1,test2])
-# del train,test1,test2
-mytype ={'uid':np.uint32,'LBS': np.uint32,'adCategoryId':np.uint32,'advertiserId':np.uint32,'age':np.uint32,'aid':np.uint32,'campaignId':np.uint32,
-'carrier':np.uint32,'consumptionAbility':np.uint32,'creativeId':np.uint32,'creativeSize':np.uint32,'ct':object,'education':np.uint32,'gender':np.uint32,'house':np.uint32,'interest1':object,'interest2':object,'interest3':object,'interest4':object,'interest5':object,'kw1':object,'kw2':object,'kw3':object,'marriageStatus':object,'os':object ,'productId':np.uint32,'productType':np.uint32,'topic1':object,'topic2':object,'topic3':object,'label':np.uint32,'appIdAction':object,'appIdInstall':object}
-data = pd.read_csv('./datas/mergedAll.csv',usecols=mytype.keys(),dtype=mytype)
-train1= pd.read_csv('./datas/train1Merged.csv')
-train1.fillna(0,inplace=True)
-data = pd.concat([data,train1])
-gc.collect()
-# user = pd.read_csv('./datas/userFeature.csv')[['uid','appIdAction','appIdInstall']]
-# # data = pd.merge(data,user,on='uid',how='left')
-# # del  user
-# gc.collect()
-data.fillna(0,inplace=True)
-data = nlp_feature_score("appIdAction",data)
-data = nlp_feature_score("appIdInstall",data)
-data = pro(data)
-data = feat_size(data)
-data = feat_active(data)
+    grouped = data.groupby('appID')['age'].mean().reset_index()
+    grouped.columns = ['appID', 'app_mean_age']
+    data = data.merge(grouped, how='left', on='appID')
+    grouped = data.groupby('positionID')['age'].mean().reset_index()
+    grouped.columns = ['positionID', 'position_mean_age']
+    data = data.merge(grouped, how='left', on='positionID')
+    grouped = data.groupby('appCategory')['age'].mean().reset_index()
+    grouped.columns = ['appCategory', 'appCategory_mean_age']
+    data = data.merge(grouped, how='left', on='appCategory')
 
-data = feat_cross(data)
-data.to_csv('./datas/all.csv',index=False)
-data = feat_sta(data)
-data.to_csv('./datas/csall.csv',index=False)
+    X_train = data.loc[data['label'] != -1, :]
+    X_test = data.loc[data['label'] == -1, :]
+    X_test.loc[:, 'instanceID'] = res.values
+    del data, grouped
+    gc.collect()
+    return X_train, X_test
+
+#排序特征
+def get_rank_feat(data, col, name):
+    data[name] = data.groupby(col).cumcount() + 1
+    return data
+
+#
+def gen_pos_neg_aid_fea():
+    train_data = pd.read_csv('input/train.csv')
+    test2_data = pd.read_csv('input/test2.csv')
+
+    train_user = train_data.uid.unique()
+
+    # user-aid dict
+    uid_dict = defaultdict(list)
+    for row in tqdm(train_data.itertuples(), total=len(train_data)):
+        uid_dict[row[2]].append([row[1], row[3]])
+
+    # user convert
+    uid_convert = {}
+    for uid in tqdm(train_user):
+        pos_aid, neg_aid = [], []
+        for data in uid_dict[uid]:
+            if data[1] > 0:
+                pos_aid.append(data[0])
+            else:
+                neg_aid.append(data[0])
+        uid_convert[uid] = [pos_aid, neg_aid]
+
+    test2_neg_pos_aid = {}
+    for row in tqdm(test2_data.itertuples(), total=len(test2_data)):
+        aid = row[1]
+        uid = row[2]
+        if uid_convert.get(uid, []) == []:
+            test2_neg_pos_aid[row[0]] = ['', '', -1]
+        else:
+            pos_aid, neg_aid = uid_convert[uid][0].copy(), uid_convert[uid][1].copy()
+            convert = len(pos_aid) / (len(pos_aid) + len(neg_aid)) if (len(pos_aid) + len(neg_aid)) > 0 else -1
+            test2_neg_pos_aid[row[0]] = [' '.join(map(str, pos_aid)), ' '.join(map(str, neg_aid)), convert]
+    df_test2 = pd.DataFrame.from_dict(data=test2_neg_pos_aid, orient='index')
+    df_test2.columns = ['pos_aid', 'neg_aid', 'uid_convert']
+
+    train_neg_pos_aid = {}
+    for row in tqdm(train_data.itertuples(), total=len(train_data)):
+        aid = row[1]
+        uid = row[2]
+        pos_aid, neg_aid = uid_convert[uid][0].copy(), uid_convert[uid][1].copy()
+        if aid in pos_aid:
+            pos_aid.remove(aid)
+        if aid in neg_aid:
+            neg_aid.remove(aid)
+        convert = len(pos_aid) / (len(pos_aid) + len(neg_aid)) if (len(pos_aid) + len(neg_aid)) > 0 else -1
+        train_neg_pos_aid[row[0]] = [' '.join(map(str, pos_aid)), ' '.join(map(str, neg_aid)), convert]
+
+    df_train = pd.DataFrame.from_dict(data=train_neg_pos_aid, orient='index')
+    df_train.columns = ['pos_aid', 'neg_aid', 'uid_convert']
+
+    df_train.to_csv("dataset/train_neg_pos_aid.csv", index=False)
+    df_test2.to_csv("dataset/test2_neg_pos_aid.csv", index=False)
+
