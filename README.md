@@ -1,6 +1,19 @@
-此贴代码分析进行到模仿top3 attention机制,持续更新ing.....
+此贴代码分析进行到模仿top3 attention机制,持续更新ing.....  
+2018腾讯算法大赛第29/1500名，此贴总结TOP10代码，初次大数据（机器学习）比赛，扫盲贴。  
 
-2018腾讯算法大赛第29/1500名，此贴总结TOP10代码，初次大数据（机器学习）比赛，扫盲贴。此次TOP1由葛文强团队的自创的NN取得，模型类似于其IJCAI2018模型图片位于：  
+	大多数kaggle比赛利用特征工程加gbdt即可取得较好成绩，而腾讯比赛是一个靠模型得奖的比赛，因此对机器，以及dnn模型研究的要求就很高。
+	目前实验较有效的几个操作：
+	*微软亚研的MSRAPrelu初始化
+	*多值特征的attention机制
+	*自适应的正则化
+	*wide 方向以及 纵向的MLP
+	*learning rate decay
+	*BN,drop out
+	*focal loss
+	*dice激活函数正在试验中
+	*据说log mvm有效
+	实际上lr挖掘一阶特征，FFM层二阶，interest 和 mvm层的高阶特征是为模型尽可能的去挖掘特征中隐藏的信息，mlp来分配权重
+此次TOP1由葛文强团队的自创的NN取得，模型类似于其IJCAI2018模型图片位于：  
 
 	./picture/top1.png
 第三名为清华大学茶园和贵系大佬自创的DEEP INTEREST FFM，PPT海报位于：  

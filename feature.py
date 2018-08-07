@@ -393,3 +393,305 @@ def gen_pos_neg_aid_fea():
     df_train.to_csv("dataset/train_neg_pos_aid.csv", index=False)
     df_test2.to_csv("dataset/test2_neg_pos_aid.csv", index=False)
 
+#dnn feature
+def mutil_ids(train_df, dev_df, test_df, word2index):
+    features_mutil = ['interest1', 'interest2', 'interest3', 'interest4', 'interest5', 'kw1', 'kw2', 'kw3', 'topic1',
+                      'topic2', 'topic3', 'appIdAction', 'appIdInstall', 'marriageStatus', 'ct', 'os']
+    for s in features_mutil:
+        cont = {}
+        with open('ffm_data/train/' + str(s), 'w') as f:
+            for lines in list(train_df[s].values):
+                f.write(str(lines) + '\n')
+                for line in lines.split():
+                    if str(line) not in cont:
+                        cont[str(line)] = 0
+                    cont[str(line)] += 1
+
+        with open('ffm_data/dev/' + str(s), 'w') as f:
+            for line in list(dev_df[s].values):
+                f.write(str(line) + '\n')
+
+        with open('ffm_data/test/' + str(s), 'w') as f:
+            for line in list(test_df[s].values):
+                f.write(str(line) + '\n')
+        index = []
+        for k in cont:
+            if cont[k] >= threshold:
+                index.append(k)
+        word2index[s] = {}
+        for idx, val in enumerate(index):
+            word2index[s][val] = idx + 2
+        print(s + ' done!')
+
+
+def len_features(train_df, dev_df, test_df, word2index):
+    len_features = ['interest1', 'interest2', 'interest3', 'interest4', 'interest5', 'kw1', 'kw2', 'kw3', 'topic1',
+                    'topic2', 'topic3']
+    for s in len_features:
+        dev_df[s + '_len'] = dev_df[s].apply(lambda x: len(x.split()) if x != '-1' else 0)
+        test_df[s + '_len'] = test_df[s].apply(lambda x: len(x.split()) if x != '-1' else 0)
+        train_df[s + '_len'] = train_df[s].apply(lambda x: len(x.split()) if x != '-1' else 0)
+        s = s + '_len'
+        cont = {}
+        with open('ffm_data/train/' + str(s), 'w') as f:
+            for line in list(train_df[s].values):
+                f.write(str(line) + '\n')
+                if str(line) not in cont:
+                    cont[str(line)] = 0
+                cont[str(line)] += 1
+
+        with open('ffm_data/dev/' + str(s), 'w') as f:
+            for line in list(dev_df[s].values):
+                f.write(str(line) + '\n')
+
+        with open('ffm_data/test/' + str(s), 'w') as f:
+            for line in list(test_df[s].values):
+                f.write(str(line) + '\n')
+        index = []
+        for k in cont:
+            if cont[k] >= threshold:
+                index.append(k)
+        word2index[s] = {}
+        for idx, val in enumerate(index):
+            word2index[s][val] = idx + 2
+        del train_df[s]
+        del dev_df[s]
+        del test_df[s]
+        gc.collect()
+        print(s + ' done!')
+
+
+def count_features(train_df, dev_df, test_df, word2index):
+    count_feature = ['uid']
+    data = train_df.append(dev_df)
+    data = data.append(test_df)
+    for s in count_feature:
+        g = dict(data.groupby(s).size())
+        s_ = s
+        s = s + '_count'
+        cont = {}
+
+        with open('ffm_data/train/' + str(s), 'w') as f:
+            for line in list(train_df[s_].values):
+                line = g[line]
+                if str(line) not in cont:
+                    cont[str(line)] = 0
+                cont[str(line)] += 1
+                f.write(str(line) + '\n')
+
+        with open('ffm_data/dev/' + str(s), 'w') as f:
+            for line in list(dev_df[s_].values):
+                line = g[line]
+                f.write(str(line) + '\n')
+
+        with open('ffm_data/test/' + str(s), 'w') as f:
+            for line in list(test_df[s_].values):
+                line = g[line]
+                f.write(str(line) + '\n')
+        index = []
+        for k in cont:
+            if cont[k] >= threshold:
+                index.append(k)
+        word2index[s] = {}
+        for idx, val in enumerate(index):
+            word2index[s][val] = idx + 2
+        print(s + ' done!')
+
+
+def kfold_features(train_df, dev_df, test_df, word2index):
+    features_mutil = ['interest1', 'interest2', 'interest3', 'interest4', 'interest5', 'kw1', 'kw2', 'kw3', 'topic1',
+                      'topic2', 'topic3', 'appIdAction', 'appIdInstall', 'marriageStatus', 'ct', 'os']
+    for f in features_mutil:
+        del train_df[f]
+        del dev_df[f]
+        del test_df[f]
+        gc.collect()
+    count_feature = ['uid']
+    feature = ['advertiserId', 'campaignId', 'creativeId', 'creativeSize', 'adCategoryId', 'productId', 'productType']
+    for f in feature:
+        train_df[f + '_uid'] = train_df[f] + train_df['uid'] * 10000000
+        dev_df[f + '_uid'] = dev_df[f] + dev_df['uid'] * 10000000
+        test_df[f + '_uid'] = test_df[f] + test_df['uid'] * 10000000
+        count_feature.append(f + '_uid')
+
+    for s in count_feature:
+        temp = s
+        kfold_static(train_df, dev_df, test_df, s)
+        s = temp + '_positive_num'
+        cont = {}
+        with open('ffm_data/train/' + str(s), 'w') as f:
+            for line in list(train_df[s].values):
+                if str(line) not in cont:
+                    cont[str(line)] = 0
+                cont[str(line)] += 1
+                f.write(str(line) + '\n')
+
+        with open('ffm_data/dev/' + str(s), 'w') as f:
+            for line in list(dev_df[s].values):
+                f.write(str(line) + '\n')
+
+        with open('ffm_data/test/' + str(s), 'w') as f:
+            for line in list(test_df[s].values):
+                f.write(str(line) + '\n')
+        index = []
+        for k in cont:
+            if cont[k] >= threshold:
+                index.append(k)
+        word2index[s] = {}
+        for idx, val in enumerate(index):
+            word2index[s][val] = idx + 2
+        pkl.dump(word2index, open('ffm_data/dic.pkl', 'wb'))
+        print(s + ' done!')
+        del train_df[s]
+        del dev_df[s]
+        del test_df[s]
+
+        s = temp + '_negative_num'
+        cont = {}
+        with open('ffm_data/train/' + str(s), 'w') as f:
+            for line in list(train_df[s].values):
+                if str(line) not in cont:
+                    cont[str(line)] = 0
+                cont[str(line)] += 1
+                f.write(str(line) + '\n')
+
+        with open('ffm_data/dev/' + str(s), 'w') as f:
+            for line in list(dev_df[s].values):
+                f.write(str(line) + '\n')
+
+        with open('ffm_data/test/' + str(s), 'w') as f:
+            for line in list(test_df[s].values):
+                f.write(str(line) + '\n')
+        index = []
+        for k in cont:
+            if cont[k] >= threshold:
+                index.append(k)
+        word2index[s] = {}
+        for idx, val in enumerate(index):
+            word2index[s][val] = idx + 2
+        pkl.dump(word2index, open('ffm_data/dic.pkl', 'wb'))
+        del train_df[s]
+        del dev_df[s]
+        del test_df[s]
+        gc.collect()
+        print(s + ' done!')
+    for f in feature:
+        del train_df[f + '_uid']
+        del test_df[f + '_uid']
+        del dev_df[f + '_uid']
+    gc.collect()
+
+
+def kfold_static(train_df, dev_df, test_df, f):
+    print("K-fold static:", f)
+    # K-fold positive and negative num
+    index = set(range(train_df.shape[0]))
+    K_fold = []
+    for i in range(5):
+        if i == 4:
+            tmp = index
+        else:
+            tmp = random.sample(index, int(0.2 * train_df.shape[0]))
+        index = index - set(tmp)
+        print("Number:", len(tmp))
+        K_fold.append(tmp)
+    positive = [-1 for i in range(train_df.shape[0])]
+    negative = [-1 for i in range(train_df.shape[0])]
+    for i in range(5):
+        print('fold', i)
+        pivot_index = K_fold[i]
+        sample_idnex = []
+        for j in range(5):
+            if j != i:
+                sample_idnex += K_fold[j]
+        dic = {}
+        for item in train_df.iloc[sample_idnex][[f, 'label']].values:
+            if item[0] not in dic:
+                dic[item[0]] = [0, 0]
+            dic[item[0]][item[1]] += 1
+        uid = train_df[f].values
+        for k in pivot_index:
+            if uid[k] in dic:
+                positive[k] = dic[uid[k]][1]
+                negative[k] = dic[uid[k]][0]
+    train_df[f + '_positive_num'] = positive
+    train_df[f + '_negative_num'] = negative
+
+    # for dev and test
+    dic = {}
+    for item in train_df[[f, 'label']].values:
+        if item[0] not in dic:
+            dic[item[0]] = [0, 0]
+        dic[item[0]][item[1]] += 1
+    positive = []
+    negative = []
+    for uid in dev_df[f].values:
+        if uid in dic:
+            positive.append(dic[uid][1])
+            negative.append(dic[uid][0])
+        else:
+            positive.append(-1)
+            negative.append(-1)
+    dev_df[f + '_positive_num'] = positive
+    dev_df[f + '_negative_num'] = negative
+    print('dev', 'done')
+
+    positive = []
+    negative = []
+    for uid in test_df[f].values:
+        if uid in dic:
+            positive.append(dic[uid][1])
+            negative.append(dic[uid][0])
+        else:
+            positive.append(-1)
+            negative.append(-1)
+    test_df[f + '_positive_num'] = positive
+    test_df[f + '_negative_num'] = negative
+    print('test', 'done')
+    print('avg of positive num', np.mean(train_df[f + '_positive_num']), np.mean(dev_df[f + '_positive_num']),
+          np.mean(test_df[f + '_positive_num']))
+    print('avg of negative num', np.mean(train_df[f + '_negative_num']), np.mean(dev_df[f + '_negative_num']),
+          np.mean(test_df[f + '_negative_num']))
+
+
+
+def uid_seq_feature(train_data, test1_data, test2_data, label):
+    count_dict = {}#存 该id： 追加这次出现的label
+    seq_dict = {}#存序列字典 ：该种序列出现次数
+    seq_emb_dict = {}#存该序列的key
+    train_seq = []#存每个学列的index
+    ind = 0
+    for i, d in enumerate(train_data):
+        if not count_dict.__contains__(d):
+            count_dict[d] = []
+        seq_key = ' '.join(count_dict[d][-4:])
+        if not seq_dict.__contains__(seq_key):
+            seq_dict[seq_key] = 0
+            seq_emb_dict[seq_key] = ind
+            ind += 1
+        seq_dict[seq_key] += 1
+        train_seq.append(seq_emb_dict[seq_key])
+        count_dict[d].append(label[i])
+    test1_seq = []
+    for d in test1_data:
+        if not count_dict.__contains__(d):
+            seq_key = ''
+        else:
+            seq_key = ' '.join(count_dict[d][-4:])
+        if seq_emb_dict.__contains__(seq_key):
+            key = seq_emb_dict[seq_key]
+        else:
+            key = 0
+        test1_seq.append(key)
+    test2_seq = []
+    for d in test2_data:
+        if not count_dict.__contains__(d):
+            seq_key = ''
+        else:
+            seq_key = ' '.join(count_dict[d][-4:])
+        if seq_emb_dict.__contains__(seq_key):
+            key = seq_emb_dict[seq_key]
+        else:
+            key = 0
+        test2_seq.append(key)
+
