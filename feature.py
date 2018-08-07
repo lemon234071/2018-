@@ -393,7 +393,65 @@ def gen_pos_neg_aid_fea():
     df_train.to_csv("dataset/train_neg_pos_aid.csv", index=False)
     df_test2.to_csv("dataset/test2_neg_pos_aid.csv", index=False)
 
-#dnn feature
+#zhada**平滑转化率
+# def count_feature(train_data, test1_data, test2_data, labels, k, test_only= False):
+#     nums = len(train_data)
+#     interval = nums // k
+#     split_points = []
+#     for i in range(k):
+#         split_points.append(i * interval)
+#     split_points.append(nums)
+#
+#     s = set()
+#     for d in train_data:
+#         xs = d.split(' ')
+#         for x in xs:
+#             s.add(x)
+#     b = nums // len(s)
+#     a = b*1.0 / 20
+#
+#     train_res = []
+#     if not test_only:
+#         for i in range(k):
+#             tmp = []
+#             total_dict, pos_dict = gen_count_dict(train_data, labels, split_points[i],split_points[i+1])
+#             for j in range(split_points[i],split_points[i+1]):
+#                 xs = train_data[j].split(' ')
+#                 t = []
+#                 for x in xs:
+#                     if not total_dict.has_key(x):
+#                         t.append(0.05)
+#                         continue
+#                     t.append((a + pos_dict[x]) / (b + total_dict[x]))
+#                 tmp.append(max(t))
+#             train_res.extend(tmp)
+#
+#     total_dict, pos_dict = gen_count_dict(train_data, labels, 1, 0)
+#     test1_res = []
+#     for d in test1_data:
+#         xs = d.split(' ')
+#         t = []
+#         for x in xs:
+#             if not total_dict.has_key(x):
+#                 t.append(0.05)
+#                 continue
+#             t.append((a + pos_dict[x]) / (b + total_dict[x]))
+#         test1_res.append(max(t))
+#
+#     test2_res = []
+#     for d in test2_data:
+#         xs = d.split(' ')
+#         t = []
+#         for x in xs:
+#             if not total_dict.has_key(x):
+#                 t.append(0.05)
+#                 continue
+#             t.append((a + pos_dict[x]) / (b + total_dict[x]))
+#         test2_res.append(max(t))
+#
+#     return train_res, test1_res, test2_res
+
+#dnn feature################################################################################################################################
 def mutil_ids(train_df, dev_df, test_df, word2index):
     features_mutil = ['interest1', 'interest2', 'interest3', 'interest4', 'interest5', 'kw1', 'kw2', 'kw3', 'topic1',
                       'topic2', 'topic3', 'appIdAction', 'appIdInstall', 'marriageStatus', 'ct', 'os']
@@ -695,3 +753,165 @@ def uid_seq_feature(train_data, test1_data, test2_data, label):
             key = 0
         test2_seq.append(key)
 
+def gen_uid_aid_fea():
+    '''
+    载入数据，　提取aid, uid的全局统计特征
+    '''
+    train_data = pd.read_csv('input/train.csv')
+    test1_data = pd.read_csv('input/test1.csv')
+    test2_data = pd.read_csv('input/test2.csv')
+
+    ad_Feature = pd.read_csv('input/adFeature.csv')
+
+    train_len = len(train_data)  # 45539700
+    test1_len = len(test1_data)
+    test2_len = len(test2_data)  # 11727304
+
+    ad_Feature = pd.merge(ad_Feature, ad_Feature.groupby(['campaignId']).aid.nunique().reset_index(
+    ).rename(columns={'aid': 'campaignId_aid_nunique'}), how='left', on='campaignId')
+
+    df = pd.concat([train_data, test1_data, test2_data], axis=0)
+    df = pd.merge(df, df.groupby(['uid'])['aid'].nunique().reset_index().rename(
+        columns={'aid': 'uid_aid_nunique'}), how='left', on='uid')
+
+    df = pd.merge(df, df.groupby(['aid'])['uid'].nunique().reset_index().rename(
+        columns={'uid': 'aid_uid_nunique'}), how='left', on='aid')
+
+    df['uid_count'] = df.groupby('uid')['aid'].transform('count')
+    df = pd.merge(df, ad_Feature[['aid', 'campaignId_aid_nunique']], how='left', on='aid')
+
+    fea_columns = ['campaignId_aid_nunique', 'uid_aid_nunique', 'aid_uid_nunique', 'uid_count', ]
+
+    df[fea_columns].iloc[:train_len].to_csv('dataset/train_uid_aid.csv', index=False)
+    df[fea_columns].iloc[train_len: train_len+test1_len].to_csv('dataset/test1_uid_aid.csv', index=False)
+    df[fea_columns].iloc[-test2_len:].to_csv('dataset/test2_uid_aid.csv', index=False)
+
+
+def digitize():
+    uid_aid_train = pd.read_csv('dataset/train_uid_aid.csv')
+    uid_aid_test1 = pd.read_csv('dataset/test1_uid_aid.csv')
+    uid_aid_test2 = pd.read_csv('dataset/test2_uid_aid.csv')
+    uid_aid_df = pd.concat([uid_aid_train, uid_aid_test1, uid_aid_test2], axis=0)
+    for col in range(3):
+        bins = []
+        for percent in [0, 20, 35, 50, 65, 85, 100]:
+            bins.append(np.percentile(uid_aid_df.iloc[:, col], percent))
+        uid_aid_train.iloc[:, col] = np.digitize(uid_aid_train.iloc[:, col], bins, right=True)
+        uid_aid_test1.iloc[:, col] = np.digitize(uid_aid_test1.iloc[:, col], bins, right=True)
+        uid_aid_test2.iloc[:, col] = np.digitize(uid_aid_test2.iloc[:, col], bins, right=True)
+
+    count_bins = [1, 2, 4, 6, 8, 10, 16, 27, 50]
+    uid_aid_train.iloc[:, 3] = np.digitize(uid_aid_train.iloc[:, 3], count_bins, right=True)
+    uid_aid_test1.iloc[:, 3] = np.digitize(uid_aid_test1.iloc[:, 3], count_bins, right=True)
+    uid_aid_test2.iloc[:, 3] = np.digitize(uid_aid_test2.iloc[:, 3], count_bins, right=True)
+
+    uid_convert_train = pd.read_csv("dataset/train_neg_pos_aid.csv", usecols=['uid_convert'])
+    uid_convert_test2 = pd.read_csv("dataset/test2_neg_pos_aid.csv", usecols=['uid_convert'])
+
+    convert_bins = [-1, 0, 0.1, 0.3, 0.5, 0.7, 1]
+    uid_convert_train.iloc[:, 0] = np.digitize(uid_convert_train.iloc[:, 0], convert_bins, right=True)
+    uid_convert_test2.iloc[:, 0] = np.digitize(uid_convert_test2.iloc[:, 0], convert_bins, right=True)
+
+    uid_aid_train = pd.concat([uid_aid_train, uid_convert_train], axis=1)
+    uid_aid_test2 = pd.concat([uid_aid_test2, uid_convert_test2], axis=1)
+
+    uid_aid_train.to_csv('dataset/train_uid_aid_bin.csv', index=False)
+    uid_aid_test2.to_csv('dataset/test2_uid_aid_bin.csv', index=False)
+
+
+#################
+def feature_count(full, features=[]):
+    new_feature = 'new_count'
+    for i in features:
+        get_series(i)
+        new_feature += '_' + i
+    log(new_feature)
+    try:
+        del full[new_feature]
+    except:
+        pass
+    temp = full.groupby(features).size().reset_index().rename(columns={0: new_feature})
+    full = full.merge(temp, 'left', on=features)
+    # save(full, new_feature)
+    return full
+
+def Information_entropy():
+    for i in ['aid']:
+        for j in ['age', 'gender', 'education', 'consumptionAbility', 'LBS', 'carrier', 'house',
+                  'marriageStatus', 'ct', 'os']:
+            t = time.time()
+            full = feature_count(full, [i, j])
+            full['new_inf_' + i + '_' + j] = np.log1p(
+                full['new_count_' + j] * full['new_count_' + i] / full['new_count_' + i + '_' + j] / len_full)
+
+            min_v = full['new_inf_' + i + '_' + j].min()
+            full['new_inf_' + i + '_' + j] = full['new_inf_' + i + '_' + j].apply(
+                lambda x: int(float('%.1f' % min(x - min_v, 1.5)) * 10))
+            print(full['new_inf_' + i + '_' + j].value_counts())
+            save(full, 'new_inf_' + i + '_' + j, 'cate', max=15)
+
+    # 多值特征的信息熵
+    def get_inf(cond, keyword):
+        get_series(cond)
+        get_series(keyword)
+
+        # 背景字典 每个ID出现的次数
+        back_dict = {}
+        # 不同条件下 每个id 出现的次数condi_dict
+        condi_dict = {}
+        # 不同条件下aid 每个id 出现的次数
+
+        # 预先生成字典。省的判断慢
+        for i in full[cond].unique():
+            condi_dict[i] = {}
+
+        for i, row in full[[cond, keyword]].iterrows():
+            word_list = row[keyword].split()
+            for word in word_list:
+                # 对背景字典加1
+                try:
+                    back_dict[word] = back_dict[word] + 1
+                except:
+                    # 没有该词则设为0
+                    back_dict[word] = 1
+                try:
+                    # 该条件下的该词的出现次数加1
+                    condi_dict[row[cond]][word] = condi_dict[row[cond]][word] + 1
+                except:
+                    condi_dict[row[cond]][word] = 1
+
+        # 先获取平均熵
+        max_inf_list = []
+        mean_inf_list = []
+        condi_count = full.groupby(cond)[cond].count().to_dict()
+        for i, row in full[[cond, keyword]].iterrows():
+            word_list = row[keyword].split()
+
+            count = len(word_list)
+            prob = 1
+            prob_list = []
+            for word in word_list:
+                temp_prob = condi_count[row[cond]] * back_dict[word] / condi_dict[row[cond]][word] / len_full
+                prob = prob * temp_prob
+                prob_list.append(temp_prob)
+            mean_inf_list.append(np.log1p(prob) / count)
+            max_inf_list.append(
+                np.log1p(np.min(prob)))
+        return max_inf_list, mean_inf_list
+
+    # 计算maxpool 和meanpool
+    for i in ['aid']:
+        for j in ['interest1', 'interest2', 'interest3', 'interest4', 'interest5', 'kw1', 'kw2', 'kw3', 'topic1',
+                  'topic2', 'topic3', 'appIdAction', 'appIdInstall']:
+            log('new_inf_' + i + '_' + j)
+            full['new_inf_' + i + '_' + j + '_max'], full['new_inf_' + i + '_' + j + '_mean'] = get_inf(i, j)
+
+            min_v = full['new_inf_' + i + '_' + j + '_max'].min()
+            full['new_inf_' + i + '_' + j + '_max'] = full['new_inf_' + i + '_' + j + '_max'].apply(
+                lambda x: int(float('%.1f' % min(x - min_v, 1.5)) * 10))
+            save(full, 'new_inf_' + i + '_' + j + '_max', 'cate', 16)
+
+            min_v = full['new_inf_' + i + '_' + j + '_mean'].min()
+            full['new_inf_' + i + '_' + j + '_mean'] = full['new_inf_' + i + '_' + j + '_mean'].apply(
+                lambda x: int(float('%.1f' % min(x - min_v, 1.5)) * 10))
+            save(full, 'new_inf_' + i + '_' + j + '_mean', 'cate', 16)

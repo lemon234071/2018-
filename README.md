@@ -1,4 +1,4 @@
-此贴代码分析进行到模仿top3 attention机制,持续更新ing.....  
+此贴代码分析进行到模仿top3 attention机制,持续更新ing.....(代码粗糙丑陋，后续将逐步类化，pipeline完善泛化一个模板)  
 2018腾讯算法大赛第29/1500名，此贴总结TOP10代码，初次大数据（机器学习）比赛，扫盲贴。  
 
 	大多数kaggle比赛利用特征工程加gbdt即可取得较好成绩，而腾讯比赛是一个靠模型得奖的比赛，因此对机器，以及dnn模型研究的要求就很高。
@@ -10,9 +10,14 @@
 	*learning rate decay
 	*BN,drop out
 	*focal loss
-	*dice激活函数正在试验中
-	*据说log mvm有效
-	实际上lr挖掘一阶特征，FFM层二阶，interest 和 mvm层的高阶特征是为模型尽可能的去挖掘特征中隐藏的信息，mlp来分配权重，相关论文地址：
+	@矩阵乘法GPU优化可以加速
+	
+	计划尝试的操作：
+	#dice激活函数正在试验中
+	#据说log mvm有效
+	#尝试GAP（global average pooling）代替全连接层
+	实际上lr挖掘一阶特征，FFM层二阶，interest 和 mvm层的高阶特征是为模型尽可能的去挖掘特征中隐藏的信息，mlp来分配权重.
+	相关论文地址：
 	deep interest Network:  https://arxiv.org/pdf/1706.06978.pdf
 	
 此次TOP1由葛文强团队的自创的NN取得，模型类似于其IJCAI2018模型图片位于：  
@@ -32,7 +37,10 @@ top20经验贴传送门：
 
 	Tensorflow:[2018腾讯广告算法大赛总结（Rank6）-模型篇](https://zhuanlan.zhihu.com/p/38443751)
 	Pytourch:[第二届腾讯广告算法大赛总结（Rank 9）](https://zhuanlan.zhihu.com/p/38499275?utm_source=com.tencent.tim&utm_medium=social&utm_oi=571282483765710848)
+	[2018腾讯广告算法大赛Top10-特征工程]https://zhuanlan.zhihu.com/p/40479648
 	[2018腾讯广告算法大赛总结/0.772229/Rank11](https://zhuanlan.zhihu.com/p/38034501)
+	[腾讯社交广告算法大赛（Top15）总结-特征工程]https://zhuanlan.zhihu.com/p/39491062
+	
 以上模型皆属于neutral network模型，因当数据量很大，机器限制又很高的时候，NN模型很适应场景，ctr nn模型扫盲贴在后面，此次数据量过大，复赛对GPU和内存要求很高，大概400G内存，我将在下面的目录下放一个我赛后学习测试用的数据集，16G笔记本可跑：  
 	
 	./datas/
@@ -53,7 +61,7 @@ top20经验贴传送门：
 
 特征----本次比赛大家特征都大同小异：  
 
-	常见几种特征提取代码./feature.py  
+	常见几种特征提取代码./feature.py  (注意转化率特征KFOLD操作和贝叶斯平滑操作，可自行百度）
 	怎么挖掘特征？渣大传送门https://zhuanlan.zhihu.com/p/38341881
 
 PS:具体情况具体分析，有时候选特征可以看LGB提供的API看重要度，有时候需观察与label的相关度，但是要注意不要leak（即用未来的数据来预测过去，用label去预测label，会造成线下很高，线上很低），可以用KFOLD来避免。但是这些都不保证一个特征有用无用，最靠谱的还是直接放进去看线上是否提高了，但是这样你的时间不够的，复赛又可能有别的强特。另外学习怎么做特征，最好的办法就是看大赛TOP10的PPT和代码，看太多特征工程原理上的东西会浪费你很多时间。另外，基本的可视化分析，这个东西扫盲贴里有介绍，但是赛后发现大佬们分析的东西和我这样的新手菜鸟分析的东西完全不是一个东西啊。所以尚在摸索中。 
