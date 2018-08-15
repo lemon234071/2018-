@@ -34,9 +34,11 @@ top20经验贴传送门：
 	
 	官方baseline:
 	https://github.com/YouChouNoBB/2018-tencent-ad-competition-baseline
-
-	Tensorflow:[2018腾讯广告算法大赛总结（Rank6）-模型篇](https://zhuanlan.zhihu.com/p/38443751)
-	Pytourch:[第二届腾讯广告算法大赛总结（Rank 9）](https://zhuanlan.zhihu.com/p/38499275?utm_source=com.tencent.tim&utm_medium=social&utm_oi=571282483765710848)
+	
+	[腾讯广告算法赛开源-Top4-SDD]https://zhuanlan.zhihu.com/p/42089584
+	https://blog.csdn.net/ML_SDD/article/details/81702168
+	[2018腾讯广告算法大赛总结（Rank6）-模型篇](https://zhuanlan.zhihu.com/p/38443751)
+	[第二届腾讯广告算法大赛总结（Rank 9）](https://zhuanlan.zhihu.com/p/38499275?utm_source=com.tencent.tim&utm_medium=social&utm_oi=571282483765710848)
 	[2018腾讯广告算法大赛Top10-特征工程]https://zhuanlan.zhihu.com/p/40479648
 	[2018腾讯广告算法大赛总结/0.772229/Rank11](https://zhuanlan.zhihu.com/p/38034501)
 	[腾讯社交广告算法大赛（Top15）总结-特征工程]https://zhuanlan.zhihu.com/p/39491062
